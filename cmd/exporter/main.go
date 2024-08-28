@@ -12,9 +12,38 @@ import (
 	"github.com/kuskoman/logstash-exporter/config"
 	"github.com/kuskoman/logstash-exporter/server"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"time"
+	"runtime"
 )
 
+// GenCpuLoad gives the Cpu work to do by spawning goroutines.
+func GenCpuLoad(cores int, interval string, percentage int) {
+	runtime.GOMAXPROCS(cores)
+	unitHundresOfMicrosecond := 1000
+	runMicrosecond := unitHundresOfMicrosecond * percentage
+	// sleepMicrosecond := unitHundresOfMicrosecond*100 - runMicrosecond
+
+	for i := 0; i < cores; i++ {
+		go func() {
+			runtime.LockOSThread()
+			for {
+				begin := time.Now()
+				for {
+					if time.Since(begin) > time.Duration(runMicrosecond)*time.Microsecond {
+						break
+					}
+				}
+			}
+		}()
+	}
+
+	t, _ := time.ParseDuration(interval)
+	time.Sleep(t * time.Second)
+}
+
 func main() {
+	fmt.Println("Hello, world! It's the GenCpuLoad version")
 	version := flag.Bool("version", false, "prints the version and exits")
 
 	flag.Parse()
@@ -30,6 +59,7 @@ func main() {
 
 	logger, err := config.SetupSlog()
 	if err != nil {
+		GenCpuLoad(2, "seconds", 50)
 		log.Fatalf("failed to setup slog: %s", err)
 	}
 	slog.SetDefault(logger)
